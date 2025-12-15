@@ -1,0 +1,342 @@
+-- KRB Chat - Brookhaven Delta Edition (No Sticker)
+-- إصدار محسّن يعمل على الهاتف في بروكهافين
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- 1. شاشة تحميل بدون ستيكر
+local function CreateLoadingScreen()
+    local loadingGui = Instance.new("ScreenGui")
+    loadingGui.Name = "KRBLoading"
+    loadingGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    loadingGui.ResetOnSpawn = false
+    
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Size = UDim2.new(1, 0, 1, 0)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(5, 5, 5) -- أسود غامق
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Parent = loadingGui
+    
+    -- نص التحميل
+    local loadingText = Instance.new("TextLabel")
+    loadingText.Text = "جارٍ تحميل نظام الشات..."
+    loadingText.Font = Enum.Font.GothamBold
+    loadingText.TextSize = 22
+    loadingText.TextColor3 = Color3.fromRGB(200, 200, 200)
+    loadingText.BackgroundTransparency = 1
+    loadingText.Size = UDim2.new(1, 0, 0, 30)
+    loadingText.Position = UDim2.new(0, 0, 0.45, 0)
+    loadingText.Parent = mainFrame
+    
+    -- شريط التحميل
+    local loadBarBg = Instance.new("Frame")
+    loadBarBg.Size = UDim2.new(0.6, 0, 0, 6)
+    loadBarBg.Position = UDim2.new(0.2, 0, 0.5, 0)
+    loadBarBg.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    loadBarBg.BorderSizePixel = 0
+    loadBarBg.Parent = mainFrame
+    
+    local loadBar = Instance.new("Frame")
+    loadBar.Size = UDim2.new(0, 0, 1, 0)
+    loadBar.BackgroundColor3 = Color3.fromRGB(255, 50, 100) -- لون وردي غامق
+    loadBar.BorderSizePixel = 0
+    loadBar.Parent = loadBarBg
+    
+    loadingGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    
+    -- تحميل متحرك
+    for i = 1, 100 do
+        loadBar.Size = UDim2.new(i/100, 0, 1, 0)
+        loadingText.Text = "جارٍ تحميل نظام الشات... " .. i .. "%"
+        RunService.RenderStepped:Wait()
+    end
+    
+    task.wait(0.5)
+    
+    -- إخفاء الشاشة
+    local tween = TweenService:Create(mainFrame, TweenInfo.new(0.5), {BackgroundTransparency = 1})
+    tween:Play()
+    tween.Completed:Connect(function()
+        loadingGui:Destroy()
+        print("✅ تم تحميل نظام الشات بنجاح")
+    end)
+end
+
+-- 2. الواجهة الرئيسية الأسود الغامق
+local function CreateMainGUI()
+    local mainGui = Instance.new("ScreenGui")
+    mainGui.Name = "KRBChatMain"
+    mainGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    mainGui.ResetOnSpawn = false
+    
+    -- النافذة الرئيسية (أسود غامق جداً)
+    local mainWindow = Instance.new("Frame")
+    mainWindow.Size = UDim2.new(0.85, 0, 0.75, 0) -- مناسب للهاتف
+    mainWindow.Position = UDim2.new(0.075, 0, 0.15, 0)
+    mainWindow.BackgroundColor3 = Color3.fromRGB(10, 10, 10) -- أسود غامق
+    mainWindow.BorderColor3 = Color3.fromRGB(40, 40, 40)
+    mainWindow.BorderSizePixel = 2
+    mainWindow.Visible = false
+    mainWindow.Parent = mainGui
+    
+    -- الترويسة
+    local header = Instance.new("Frame")
+    header.Size = UDim2.new(1, 0, 0, 45)
+    header.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    header.BorderSizePixel = 0
+    header.Parent = mainWindow
+    
+    local title = Instance.new("TextLabel")
+    title.Text = "💬 KRB CHAT - Brookhaven"
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 18
+    title.TextColor3 = Color3.fromRGB(255, 50, 100) -- وردي غامق
+    title.BackgroundTransparency = 1
+    title.Size = UDim2.new(1, -50, 1, 0)
+    title.Position = UDim2.new(0, 10, 0, 0)
+    title.Parent = header
+    
+    -- زر الإغلاق
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Text = "✕"
+    closeBtn.Size = UDim2.new(0, 40, 0, 40)
+    closeBtn.Position = UDim2.new(1, -45, 0, 2)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+    closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.TextSize = 20
+    closeBtn.Parent = header
+    
+    -- قائمة اللاعبين
+    local playersFrame = Instance.new("ScrollingFrame")
+    playersFrame.Size = UDim2.new(1, -10, 0.35, 0)
+    playersFrame.Position = UDim2.new(0, 5, 0, 50)
+    playersFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    playersFrame.BorderSizePixel = 0
+    playersFrame.ScrollBarThickness = 4
+    playersFrame.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60)
+    playersFrame.Parent = mainWindow
+    
+    -- منطقة المحادثة
+    local chatFrame = Instance.new("ScrollingFrame")
+    chatFrame.Size = UDim2.new(1, -10, 0.4, 0)
+    chatFrame.Position = UDim2.new(0, 5, 0.35, 55)
+    chatFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    chatFrame.BorderSizePixel = 0
+    chatFrame.ScrollBarThickness = 4
+    chatFrame.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60)
+    chatFrame.Parent = mainWindow
+    
+    -- حقل الكتابة
+    local inputBox = Instance.new("TextBox")
+    inputBox.Size = UDim2.new(1, -10, 0, 40)
+    inputBox.Position = UDim2.new(0, 5, 0.75, 5)
+    inputBox.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    inputBox.PlaceholderText = "اكتب رسالتك هنا..."
+    inputBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+    inputBox.Font = Enum.Font.Gotham
+    inputBox.TextSize = 16
+    inputBox.ClearTextOnFocus = false
+    inputBox.Parent = mainWindow
+    
+    -- زر الإرسال (كبير للهاتف)
+    local sendButton = Instance.new("TextButton")
+    sendButton.Size = UDim2.new(1, -10, 0, 45)
+    sendButton.Position = UDim2.new(0, 5, 0.85, 5)
+    sendButton.BackgroundColor3 = Color3.fromRGB(255, 50, 100)
+    sendButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    sendButton.Text = "📤 إرسال الرسالة"
+    sendButton.Font = Enum.Font.GothamBold
+    sendButton.TextSize = 18
+    sendButton.Parent = mainWindow
+    
+    -- زر فتح الشات (في الزاوية)
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Size = UDim2.new(0, 65, 0, 65)
+    toggleButton.Position = UDim2.new(0, 15, 0, 15)
+    toggleButton.BackgroundColor3 = Color3.fromRGB(255, 50, 100)
+    toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleButton.Text = "💬"
+    toggleButton.Font = Enum.Font.FredokaOne
+    toggleButton.TextSize = 28
+    toggleButton.Parent = mainGui
+    
+    mainGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    
+    return {
+        Gui = mainGui,
+        Window = mainWindow,
+        PlayersFrame = playersFrame,
+        ChatFrame = chatFrame,
+        InputBox = inputBox,
+        SendButton = sendButton,
+        ToggleButton = toggleButton,
+        CloseButton = closeBtn
+    }
+end
+
+-- 3. إضافة اللاعبين للقائمة
+local function AddPlayersToList(playersFrame)
+    playersFrame:ClearAllChildren()
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local playerBtn = Instance.new("TextButton")
+            playerBtn.Size = UDim2.new(1, -10, 0, 40)
+            playerBtn.Position = UDim2.new(0, 5, 0, #playersFrame:GetChildren() * 45)
+            playerBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+            playerBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+            playerBtn.Text = "👤 " .. player.Name
+            playerBtn.Font = Enum.Font.Gotham
+            playerBtn.TextSize = 14
+            playerBtn.TextXAlignment = Enum.TextXAlignment.Left
+            playerBtn.Parent = playersFrame
+            
+            playerBtn.MouseButton1Click:Connect(function()
+                -- عند الضغط على لاعب
+                local selectedMsg = Instance.new("TextLabel")
+                selectedMsg.Text = "→ اخترت: " .. player.Name
+                selectedMsg.TextColor3 = Color3.fromRGB(255, 100, 150)
+                selectedMsg.BackgroundTransparency = 1
+                selectedMsg.Size = UDim2.new(1, -10, 0, 25)
+                selectedMsg.Position = UDim2.new(0, 5, 0, #GUI.ChatFrame:GetChildren() * 30)
+                selectedMsg.Font = Enum.Font.Gotham
+                selectedMsg.TextSize = 14
+                selectedMsg.TextXAlignment = Enum.TextXAlignment.Left
+                selectedMsg.Parent = GUI.ChatFrame
+                
+                -- توجيه الكتابة للاعب
+                GUI.InputBox.Text = "/w " .. player.Name .. " "
+                GUI.InputBox:CaptureFocus()
+            end)
+        end
+    end
+end
+
+-- 4. النظام الرئيسي
+local function MainSystem()
+    -- شاشة التحميل
+    CreateLoadingScreen()
+    task.wait(0.5)
+    
+    -- إنشاء الواجهة
+    GUI = CreateMainGUI()
+    
+    -- تعبئة قائمة اللاعبين
+    AddPlayersToList(GUI.PlayersFrame)
+    
+    -- أحداث الأزرار
+    GUI.ToggleButton.MouseButton1Click:Connect(function()
+        GUI.Window.Visible = not GUI.Window.Visible
+    end)
+    
+    GUI.CloseButton.MouseButton1Click:Connect(function()
+        GUI.Window.Visible = false
+    end)
+    
+    GUI.SendButton.MouseButton1Click:Connect(function()
+        local message = GUI.InputBox.Text
+        if message and #message > 0 then
+            -- إضافة للشات المحلي
+            local msgLabel = Instance.new("TextLabel")
+            msgLabel.Text = LocalPlayer.Name .. ": " .. message
+            msgLabel.TextColor3 = Color3.fromRGB(100, 255, 100) -- أخضر للرسائل
+            msgLabel.BackgroundTransparency = 1
+            msgLabel.Size = UDim2.new(1, -10, 0, 25)
+            msgLabel.Position = UDim2.new(0, 5, 0, #GUI.ChatFrame:GetChildren() * 30)
+            msgLabel.Font = Enum.Font.Gotham
+            msgLabel.TextSize = 14
+            msgLabel.TextXAlignment = Enum.TextXAlignment.Left
+            msgLabel.Parent = GUI.ChatFrame
+            
+            -- إرسال للعبة (بروكهافين)
+            local success, err = pcall(function()
+                local chatEvents = game:GetService("ReplicatedStorage"):WaitForChild("DefaultChatSystemChatEvents")
+                chatEvents:WaitForChild("SayMessageRequest"):FireServer(message, "All")
+            end)
+            
+            if not success then
+                local errorMsg = Instance.new("TextLabel")
+                errorMsg.Text = "[!] لا يمكن إرسال الرسالة"
+                errorMsg.TextColor3 = Color3.fromRGB(255, 100, 100)
+                errorMsg.BackgroundTransparency = 1
+                errorMsg.Size = UDim2.new(1, -10, 0, 20)
+                errorMsg.Position = UDim2.new(0, 5, 0, #GUI.ChatFrame:GetChildren() * 30)
+                errorMsg.Font = Enum.Font.Gotham
+                errorMsg.TextSize = 12
+                errorMsg.Parent = GUI.ChatFrame
+            end
+            
+            GUI.InputBox.Text = ""
+        end
+    end)
+    
+    -- إرسال عند الضغط على Enter
+    GUI.InputBox.FocusLost:Connect(function(enterPressed)
+        if enterPressed then
+            GUI.SendButton.MouseButton1Click:Fire()
+        end
+    end)
+    
+    -- تحديث قائمة اللاعبين
+    Players.PlayerAdded:Connect(function()
+        task.wait(1)
+        AddPlayersToList(GUI.PlayersFrame)
+    end)
+    
+    Players.PlayerRemoving:Connect(function()
+        AddPlayersToList(GUI.PlayersFrame)
+    end)
+    
+    -- اختصار لوحة المفاتيح
+    UserInputService.InputBegan:Connect(function(input)
+        if input.KeyCode == Enum.KeyCode.F9 then
+            GUI.Window.Visible = not GUI.Window.Visible
+        end
+    end)
+    
+    print("====================================")
+    print("✅ KRB Chat Loaded Successfully!")
+    print("📱 Designed for Delta Mobile")
+    print("🎮 Works in Brookhaven Only")
+    print("⚡ Press 💬 button to open/close")
+    print("⚡ Press F9 to toggle (if keyboard)")
+    print("====================================")
+    
+    return true
+end
+
+-- 5. بدء التشغيل
+local GUI = nil
+local success, errorMsg = pcall(function()
+    MainSystem()
+end)
+
+if not success then
+    warn("❌ Error loading KRB Chat: " .. tostring(errorMsg))
+    
+    -- نسخة احتياطية بسيطة
+    local backupGui = Instance.new("ScreenGui")
+    backupGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    
+    local simpleBtn = Instance.new("TextButton")
+    simpleBtn.Text = "💬 فتح الشات"
+    simpleBtn.Size = UDim2.new(0, 150, 0, 60)
+    simpleBtn.Position = UDim2.new(0, 10, 0, 10)
+    simpleBtn.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+    simpleBtn.TextColor3 = Color3.fromRGB(255, 50, 100)
+    simpleBtn.Font = Enum.Font.GothamBold
+    simpleBtn.TextSize = 16
+    simpleBtn.Parent = backupGui
+    
+    simpleBtn.MouseButton1Click:Connect(function()
+        game:GetService("TextChatService"):Chat("/chat Hello from KRB!")
+    end)
+    
+    print("⚠️ Loaded in Simple Mode - Button only")
+end
