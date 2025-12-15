@@ -319,24 +319,3 @@ end)
 
 if not success then
     warn("❌ Error loading KRB Chat: " .. tostring(errorMsg))
-    
-    -- نسخة احتياطية بسيطة
-    local backupGui = Instance.new("ScreenGui")
-    backupGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-    
-    local simpleBtn = Instance.new("TextButton")
-    simpleBtn.Text = "💬 فتح الشات"
-    simpleBtn.Size = UDim2.new(0, 150, 0, 60)
-    simpleBtn.Position = UDim2.new(0, 10, 0, 10)
-    simpleBtn.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-    simpleBtn.TextColor3 = Color3.fromRGB(255, 50, 100)
-    simpleBtn.Font = Enum.Font.GothamBold
-    simpleBtn.TextSize = 16
-    simpleBtn.Parent = backupGui
-    
-    simpleBtn.MouseButton1Click:Connect(function()
-        game:GetService("TextChatService"):Chat("/chat Hello from KRB!")
-    end)
-    
-    print("⚠️ Loaded in Simple Mode - Button only")
-end
