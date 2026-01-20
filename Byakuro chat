@@ -1,0 +1,410 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+if not (identifyexecutor and identifyexecutor():lower():find("delta")) then
+    game:GetService("Players").LocalPlayer:Kick("Delta Executor only")
+    return
+end
+
+if game.PlaceId ~= 4924922222 then
+    game:GetService("Players").LocalPlayer:Kick("Brookhaven only")
+    return
+end
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+local IS_MOBILE = UserInputService.TouchEnabled
+
+local Byakuro = {
+    ChatUsers = {},
+    PrivateChats = {},
+    Messages = {},
+    UI = {},
+    Updates = {}
+}
+
+function Byakuro:CreateUI()
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "ByakuroChatDelta"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    ScreenGui.IgnoreGuiInset = IS_MOBILE
+    
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    MainFrame.BackgroundTransparency = 0.15
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Size = IS_MOBILE and UDim2.new(0.9, 0, 0, 400) or UDim2.new(0, 350, 0, 500)
+    MainFrame.Position = IS_MOBILE and UDim2.new(0.05, 0, 0.6, 0) or UDim2.new(0.75, 10, 0.5, -250)
+    MainFrame.ClipsDescendants = true
+    
+    local Glass = Instance.new("Frame")
+    Glass.Name = "Glass"
+    Glass.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Glass.BackgroundTransparency = 0.95
+    Glass.Size = UDim2.new(1, 0, 1, 0)
+    Glass.BorderSizePixel = 0
+    
+    local TitleBar = Instance.new("Frame")
+    TitleBar.Name = "TitleBar"
+    TitleBar.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+    TitleBar.BackgroundTransparency = 0.2
+    TitleBar.Size = UDim2.new(1, 0, 0, IS_MOBILE and 35 or 40)
+    
+    local Title = Instance.new("TextLabel")
+    Title.Name = "Title"
+    Title.Text = "byakuro chat"
+    Title.Font = Enum.Font.GothamBold
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.TextSize = IS_MOBILE and 14 or 16
+    Title.BackgroundTransparency = 1
+    Title.Size = UDim2.new(1, -80, 1, 0)
+    Title.Position = UDim2.new(0, 10, 0, 0)
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local DeltaBadge = Instance.new("TextLabel")
+    DeltaBadge.Name = "DeltaBadge"
+    DeltaBadge.Text = "DELTA"
+    DeltaBadge.Font = Enum.Font.GothamBlack
+    DeltaBadge.TextColor3 = Color3.fromRGB(0, 200, 255)
+    DeltaBadge.TextSize = 10
+    DeltaBadge.BackgroundTransparency = 1
+    DeltaBadge.Size = UDim2.new(0, 45, 0, 20)
+    DeltaBadge.Position = UDim2.new(1, -50, 0.5, -10)
+    DeltaBadge.TextXAlignment = Enum.TextXAlignment.Center
+    
+    local CloseButton = Instance.new("TextButton")
+    CloseButton.Name = "Close"
+    CloseButton.Text = "X"
+    CloseButton.Font = Enum.Font.GothamBold
+    CloseButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+    CloseButton.TextSize = 16
+    CloseButton.BackgroundTransparency = 1
+    CloseButton.Size = UDim2.new(0, 40, 0, 40)
+    CloseButton.Position = UDim2.new(1, -40, 0, 0)
+    
+    local TabFrame = Instance.new("Frame")
+    TabFrame.Name = "Tabs"
+    TabFrame.BackgroundTransparency = 1
+    TabFrame.Position = UDim2.new(0, 0, 0, IS_MOBILE and 35 or 40)
+    TabFrame.Size = UDim2.new(1, 0, 0, IS_MOBILE and 30 or 35)
+    
+    local TabButtons = {}
+    local Tabs = {"خاص", "جماعي", "المكتشفون"}
+    
+    for i, tabName in ipairs(Tabs) do
+        local TabButton = Instance.new("TextButton")
+        TabButton.Name = tabName .. "Tab"
+        TabButton.Text = tabName
+        TabButton.Font = Enum.Font.GothamMedium
+        TabButton.TextColor3 = i == 1 and Color3.fromRGB(0, 170, 255) or Color3.fromRGB(150, 150, 150)
+        TabButton.TextSize = IS_MOBILE and 12 or 14
+        TabButton.BackgroundTransparency = 1
+        TabButton.Position = UDim2.new((i-1)/#Tabs, 0, 0, 0)
+        TabButton.Size = UDim2.new(1/#Tabs, 0, 1, 0)
+        
+        TabButtons[tabName] = TabButton
+        TabButton.Parent = TabFrame
+    end
+    
+    local ChatFrame = Instance.new("ScrollingFrame")
+    ChatFrame.Name = "ChatWindow"
+    ChatFrame.BackgroundTransparency = 1
+    ChatFrame.BorderSizePixel = 0
+    ChatFrame.Position = UDim2.new(0, 5, 0, IS_MOBILE and 70 or 80)
+    ChatFrame.Size = UDim2.new(1, -10, 1, IS_MOBILE and -110 or -120)
+    ChatFrame.ScrollBarThickness = 3
+    ChatFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 170, 255)
+    ChatFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    ChatFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    
+    local ChatList = Instance.new("UIListLayout")
+    ChatList.Padding = UDim.new(0, 3)
+    ChatList.SortOrder = Enum.SortOrder.LayoutOrder
+    
+    local InputFrame = Instance.new("Frame")
+    InputFrame.Name = "Input"
+    InputFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    InputFrame.BackgroundTransparency = 0.3
+    InputFrame.BorderSizePixel = 0
+    InputFrame.Position = UDim2.new(0, 5, 1, IS_MOBILE and -45 or -50)
+    InputFrame.Size = UDim2.new(1, -10, 0, IS_MOBILE and 40 or 45)
+    
+    local InputBox = Instance.new("TextBox")
+    InputBox.Name = "MessageBox"
+    InputBox.PlaceholderText = "اكتب رسالة..."
+    InputBox.Font = Enum.Font.Gotham
+    InputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    InputBox.TextSize = IS_MOBILE and 12 or 14
+    InputBox.BackgroundTransparency = 1
+    InputBox.Position = UDim2.new(0, 8, 0, 0)
+    InputBox.Size = UDim2.new(1, -60, 1, 0)
+    InputBox.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local SendButton = Instance.new("TextButton")
+    SendButton.Name = "Send"
+    SendButton.Text = "ارسال"
+    SendButton.Font = Enum.Font.GothamBold
+    SendButton.TextColor3 = Color3.fromRGB(0, 170, 255)
+    SendButton.TextSize = IS_MOBILE and 12 or 14
+    SendButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    SendButton.BackgroundTransparency = 0.3
+    SendButton.Size = IS_MOBILE and UDim2.new(0, 55, 0, 30) or UDim2.new(0, 60, 0, 35)
+    SendButton.Position = UDim2.new(1, -65, 0.5, -17.5)
+    
+    local UpdateIndicator = Instance.new("Frame")
+    UpdateIndicator.Name = "UpdateIndicator"
+    UpdateIndicator.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    UpdateIndicator.BackgroundTransparency = 0.7
+    UpdateIndicator.BorderSizePixel = 0
+    UpdateIndicator.Size = UDim2.new(0, 0, 0, 2)
+    UpdateIndicator.Position = UDim2.new(0, 0, 0, 0)
+    UpdateIndicator.Visible = false
+    
+    Glass.Parent = MainFrame
+    Title.Parent = TitleBar
+    DeltaBadge.Parent = TitleBar
+    CloseButton.Parent = TitleBar
+    TitleBar.Parent = MainFrame
+    TabFrame.Parent = MainFrame
+    ChatList.Parent = ChatFrame
+    ChatFrame.Parent = MainFrame
+    InputBox.Parent = InputFrame
+    SendButton.Parent = InputFrame
+    InputFrame.Parent = MainFrame
+    UpdateIndicator.Parent = MainFrame
+    MainFrame.Parent = ScreenGui
+    
+    self.UI = {
+        ScreenGui = ScreenGui,
+        MainFrame = MainFrame,
+        ChatFrame = ChatFrame,
+        ChatList = ChatList,
+        InputBox = InputBox,
+        SendButton = SendButton,
+        TabButtons = TabButtons,
+        UpdateIndicator = UpdateIndicator,
+        Title = Title
+    }
+    
+    ScreenGui.Parent = PlayerGui
+    
+    return self.UI
+end
+
+function Byakuro:SetupAutoRefresh()
+    local lastUpdate = 0
+    local updateDebounce = false
+    
+    coroutine.wrap(function()
+        while self.UI and self.UI.ScreenGui and self.UI.ScreenGui.Parent do
+            local now = tick()
+            
+            if now - lastUpdate > 0.5 and not updateDebounce then
+                updateDebounce = true
+                
+                self:RefreshUserList()
+                self:RefreshMessages()
+                
+                if self.UI.UpdateIndicator then
+                    self.UI.UpdateIndicator.Size = UDim2.new(1, 0, 0, 2)
+                    self.UI.UpdateIndicator.Visible = true
+                    
+                    task.delay(0.2, function()
+                        if self.UI.UpdateIndicator then
+                            self.UI.UpdateIndicator.Visible = false
+                        end
+                    end)
+                end
+                
+                lastUpdate = now
+                updateDebounce = false
+            end
+            
+            task.wait(0.1)
+        end
+    end)()
+end
+
+function Byakuro:RefreshUserList()
+    for _, child in pairs(self.UI.ChatFrame:GetChildren()) do
+        if child.Name:find("User_") then
+            child:Destroy()
+        end
+    end
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local userFrame = Instance.new("Frame")
+            userFrame.Name = "User_" .. player.UserId
+            userFrame.BackgroundTransparency = 1
+            userFrame.Size = UDim2.new(1, -10, 0, 30)
+            userFrame.LayoutOrder = #self.UI.ChatFrame:GetChildren()
+            
+            local userLabel = Instance.new("TextLabel")
+            userLabel.Text = player.Name
+            userLabel.Font = Enum.Font.Gotham
+            userLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+            userLabel.TextSize = IS_MOBILE and 12 or 14
+            userLabel.BackgroundTransparency = 1
+            userLabel.Size = UDim2.new(0.7, 0, 1, 0)
+            userLabel.Position = UDim2.new(0, 5, 0, 0)
+            userLabel.TextXAlignment = Enum.TextXAlignment.Left
+            
+            local chatButton = Instance.new("TextButton")
+            chatButton.Text = "محادثة"
+            chatButton.Font = Enum.Font.Gotham
+            chatButton.TextColor3 = Color3.fromRGB(0, 170, 255)
+            chatButton.TextSize = IS_MOBILE and 10 or 12
+            chatButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            chatButton.BackgroundTransparency = 0.5
+            chatButton.Size = UDim2.new(0, 50, 0, 25)
+            chatButton.Position = UDim2.new(1, -55, 0.5, -12.5)
+            
+            userLabel.Parent = userFrame
+            chatButton.Parent = userFrame
+            userFrame.Parent = self.UI.ChatFrame
+        end
+    end
+end
+
+function Byakuro:RefreshMessages()
+end
+
+function Byakuro:ShowNotification(message)
+    local notifFrame = Instance.new("Frame")
+    notifFrame.Name = "Notification"
+    notifFrame.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+    notifFrame.BackgroundTransparency = 0.2
+    notifFrame.BorderSizePixel = 0
+    notifFrame.Size = UDim2.new(1, -20, 0, IS_MOBILE and 35 or 40)
+    notifFrame.Position = UDim2.new(0, 10, 0, 10)
+    notifFrame.ZIndex = 100
+    
+    local notifText = Instance.new("TextLabel")
+    notifText.Text = "byakuro: " .. message
+    notifText.Font = Enum.Font.Gotham
+    notifText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    notifText.TextSize = IS_MOBILE and 12 or 14
+    notifText.BackgroundTransparency = 1
+    notifText.Size = UDim2.new(1, -10, 1, 0)
+    notifText.Position = UDim2.new(0, 10, 0, 0)
+    notifText.TextXAlignment = Enum.TextXAlignment.Left
+    
+    notifText.Parent = notifFrame
+    
+    local tempScreen = Instance.new("ScreenGui")
+    tempScreen.Name = "TempNotif"
+    tempScreen.ResetOnSpawn = false
+    tempScreen.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    tempScreen.DisplayOrder = 9999
+    
+    notifFrame.Parent = tempScreen
+    tempScreen.Parent = PlayerGui
+    
+    task.delay(3, function()
+        if notifFrame and notifFrame.Parent then
+            notifFrame:Destroy()
+        end
+        if tempScreen and tempScreen.Parent then
+            tempScreen:Destroy()
+        end
+    end)
+end
+
+function Byakuro:Start()
+    self:CreateUI()
+    self:ShowNotification("Chat Ready! (Delta Only)")
+    self:SetupAutoRefresh()
+    self:RefreshUserList()
+    
+    self.UI.MainFrame.TitleBar.Close.MouseButton1Click:Connect(function()
+        self.UI.ScreenGui:Destroy()
+        self.UI = nil
+    end)
+    
+    self.UI.Input.Send.MouseButton1Click:Connect(function()
+        local message = self.UI.InputBox.Text
+        if message and #message > 0 then
+            self:ShowNotification("Sent: " .. message)
+            self.UI.InputBox.Text = ""
+        end
+    end)
+    
+    self.UI.InputBox.FocusLost:Connect(function(enterPressed)
+        if enterPressed then
+            local message = self.UI.InputBox.Text
+            if message and #message > 0 then
+                self:ShowNotification("Sent: " .. message)
+                self.UI.InputBox.Text = ""
+            end
+        end
+    end)
+    
+    for tabName, button in pairs(self.UI.TabButtons) do
+        button.MouseButton1Click:Connect(function()
+            for name, btn in pairs(self.UI.TabButtons) do
+                btn.TextColor3 = Color3.fromRGB(150, 150, 150)
+            end
+            button.TextColor3 = Color3.fromRGB(0, 170, 255)
+            
+            if tabName == "خاص" then
+                self:RefreshUserList()
+            elseif tabName == "جماعي" then
+                self:ShowNotification("Group chat coming soon")
+            elseif tabName == "المكتشفون" then
+                self:ShowNotification("Scanning for script users...")
+            end
+        end)
+    end
+    
+    if IS_MOBILE then
+        local dragging = false
+        local dragInput, dragStart, startPos
+        
+        self.UI.MainFrame.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = input.Position
+                startPos = self.UI.MainFrame.Position
+                
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        dragging = false
+                    end
+                end)
+            end
+        end)
+        
+        self.UI.MainFrame.InputChanged:Connect(function(input)
+            if dragging and input.UserInputType == Enum.UserInputType.Touch then
+                local delta = input.Position - dragStart
+                self.UI.MainFrame.Position = UDim2.new(
+                    startPos.X.Scale,
+                    startPos.X.Offset + delta.X,
+                    startPos.Y.Scale,
+                    startPos.Y.Offset + delta.Y
+                )
+            end
+        end)
+    end
+end
+
+Byakuro:Start()
+
+if IS_MOBILE then
+    for _, btn in pairs(Byakuro.UI.TabButtons) do
+        btn.Size = UDim2.new(1/3, 0, 1, 0)
+    end
+    Byakuro.UI.InputBox.PlaceholderText = "Type message..."
+end
+
+task.delay(1, function()
+    Byakuro:ShowNotification("Auto refresh active")
+end)
+
+print("byakuro chat loaded")
